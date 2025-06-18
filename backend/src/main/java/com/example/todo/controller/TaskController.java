@@ -1,27 +1,36 @@
+package com.example.todo.controller;
+
+import com.example.todo.dto.TaskDto;
+import com.example.todo.entity.Task;
+import com.example.todo.entity.User;
+import com.example.todo.service.TaskService;
+import com.example.todo.service.UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/tasks")
-@PreAuthorize("hasRole('USER')")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class TaskController {
 
-    @Autowired private TaskService taskService;
-
-    @GetMapping
-    public List<Task> getAllTasks(Authentication auth) {
-        return taskService.getTasksByUser(auth.getName());
-    }
+    private final TaskService taskService;
 
     @PostMapping
-    public Task createTask(@RequestBody Task task, Authentication auth) {
-        return taskService.saveTask(task, auth.getName());
+    public Task createTask(@RequestBody TaskDto dto, @AuthenticationPrincipal User user) {
+        return taskService.createTask(user, dto);
     }
 
-    @PutMapping("/{id}")
-    public Task updateTask(@PathVariable Long id, @RequestBody Task task) {
-        return taskService.updateTask(id, task);
+    @GetMapping
+    public List<Task> getTasks(@AuthenticationPrincipal User user) {
+        return taskService.getTasks(user);
     }
 
-    @DeleteMapping("/{id}")
-    public void deleteTask(@PathVariable Long id) {
-        taskService.deleteTask(id);
+    @DeleteMapping("/{taskId}")
+    public void deleteTask(@PathVariable Long taskId, @AuthenticationPrincipal User user) {
+        taskService.deleteTask(taskId, user);
     }
 }
