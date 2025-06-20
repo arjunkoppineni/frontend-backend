@@ -23,6 +23,7 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    // One user can have many tasks
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Task> tasks;
 }
