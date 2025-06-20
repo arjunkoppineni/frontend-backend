@@ -16,9 +16,13 @@ public class Task {
     private Long id;
 
     private String title;
+
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    private boolean completed;
+
+    // Many tasks belong to one user
+    @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 }
