@@ -1,38 +1,43 @@
 package com.example.todo.controller;
 
-import com.example.todo.dto.AuthResponse;
-import com.example.todo.dto.LoginRequest;
-import com.example.todo.dto.RegisterRequest;
 import com.example.todo.entity.User;
-import com.example.todo.service.JwtService;
+import com.example.todo.security.JwtService;
 import com.example.todo.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*") // Adjust this for production if needed
 public class AuthController {
 
     private final UserService userService;
     private final JwtService jwtService;
-    private final AuthenticationManager authManager;
 
     @PostMapping("/register")
-    public AuthResponse register(@RequestBody RegisterRequest request) {
-        User user = userService.register(request.getUsername(), request.getPassword());
-        String token = jwtService.generateToken(user);
-        return new AuthResponse(token);
+    public ResponseEntity<?> register(@RequestBody Map<String, String> request) {
+        String username = request.get("username");
+        String password = request.get("password");
+        User user = userService.registerUser(username, password);
+        String token = jwtService.generateToken(user.getUsername());
+        return ResponseEntity.ok(Map.of("token", token));
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@RequestBody LoginRequest request) {
-        authManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
-        User user = userService.findByUsername(request.getUsername());
-        String token = jwtService.generateToken(user);
-        return new AuthResponse(token);
+    public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
+        String username = request.get("username");
+        String password = request.get("password");
+
+        return userService.findByUsername(username)
+                .filter(user -> userService.validatePassword(password, user.getPassword()))
+                .map(user -> {
+                    String token = jwtService.generateToken(user.getUsername());
+                    return ResponseEntity.ok(Map.of("token", token));
+                })
+                .orElse(ResponseEntity.status(401).body("Invalid credentials"));
     }
 }
