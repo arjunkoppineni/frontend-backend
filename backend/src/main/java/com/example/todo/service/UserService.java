@@ -3,7 +3,7 @@ package com.example.todo.service;
 import com.example.todo.entity.User;
 import com.example.todo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -13,15 +13,13 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public User registerUser(String username, String password) {
-        if (userRepository.findByUsername(username).isPresent()) {
-            throw new RuntimeException("Username already exists");
-        }
+    public User registerUser(String username, String rawPassword) {
+        String hashed = passwordEncoder.encode(rawPassword);
         User user = User.builder()
                 .username(username)
-                .password(passwordEncoder.encode(password))
+                .password(hashed)
                 .build();
         return userRepository.save(user);
     }
@@ -30,7 +28,7 @@ public class UserService {
         return userRepository.findByUsername(username);
     }
 
-    public boolean validatePassword(String rawPassword, String encodedPassword) {
-        return passwordEncoder.matches(rawPassword, encodedPassword);
+    public boolean validatePassword(String raw, String encoded) {
+        return passwordEncoder.matches(raw, encoded);
     }
 }
