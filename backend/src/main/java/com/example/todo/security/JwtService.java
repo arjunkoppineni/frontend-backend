@@ -1,13 +1,13 @@
-package com.example.todo.security;
+package com.example.todo.service;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.security.Key;
 import java.util.Date;
-import java.util.function.Function;
 
 @Service
 public class JwtService {
@@ -16,31 +16,39 @@ public class JwtService {
     private String secret;
 
     @Value("${jwt.expiration}")
-    private long jwtExpiration;
+    private long expiration;
 
-    public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
-    }
+    private Key key;
 
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
-        return claimsResolver.apply(claims);
+    @PostConstruct
+    public void init() {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes());
     }
 
     public String generateToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
-                .signWith(SignatureAlgorithm.HS256, secret)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public boolean validateToken(String token, String username) {
-        return extractUsername(token).equals(username) && !isTokenExpired(token);
+    public String extractUsername(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
     }
 
-    private boolean isTokenExpired(String token) {
-        return extractClaim(token, Claims::getExpiration).before(new Date());
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            return true;
+        } catch (JwtException e) {
+            return false;
+        }
     }
 }
